@@ -1,0 +1,30 @@
+@Component
+public class CustomAuthenticationProvider implements AuthenticationProvider {
+
+    @Autowired
+    private ExternalApiService externalApiService;
+
+    @Override
+    public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+        String username = authentication.getName();
+        String password = authentication.getCredentials().toString();
+
+        // Validate credentials with external API
+        User user = externalApiService.validateUser(username, password);
+        if (user == null) {
+            throw new BadCredentialsException("Invalid credentials");
+        }
+
+        // Retrieve roles and permissions
+        Collection<GrantedAuthority> authorities = user.getRoles().stream()
+            .map(SimpleGrantedAuthority::new)
+            .collect(Collectors.toList());
+
+        return new UsernamePasswordAuthenticationToken(username, password, authorities);
+    }
+
+    @Override
+    public boolean supports(Class<?> authentication) {
+        return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
+    }
+}
